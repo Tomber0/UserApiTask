@@ -22,10 +22,10 @@ namespace UserApiTask.Models
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Role>().HasData(new Role() { Id = 1, Name = "" });
-            modelBuilder.Entity<Role>().HasData(new Role() { Id = 2, Name = "" });
-            modelBuilder.Entity<Role>().HasData(new Role() { Id = 3, Name = "" });
-            modelBuilder.Entity<Role>().HasData(new Role() { Id = 4, Name = "" });
+            modelBuilder.Entity<Role>().HasData(new Role() { Id = 1, Name = "User" });
+            modelBuilder.Entity<Role>().HasData(new Role() { Id = 2, Name = "Admin" });
+            modelBuilder.Entity<Role>().HasData(new Role() { Id = 3, Name = "Support" });
+            modelBuilder.Entity<Role>().HasData(new Role() { Id = 4, Name = "SuperAdmin" });
         }
     }
 }
