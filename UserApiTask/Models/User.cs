@@ -8,13 +8,13 @@ namespace UserApiTask.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "This field is required")]
+        [Required(ErrorMessage = "Name field is required")]
         public string Name { get; set; }
 
-        [Required(ErrorMessage = "This field is required")]
+        [Required(ErrorMessage = "Age field is required")]
         public int Age { get; set; }
 
-        [Required(ErrorMessage = "This field is required")]
+        [Required(ErrorMessage = "Email field is required")]
         public string Email { get; set; }
 
         [ForeignKey("RoleId")]

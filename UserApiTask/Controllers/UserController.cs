@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
+using UserApiTask.Configurations;
 using UserApiTask.Models;
 using UserApiTask.Utils;
 
@@ -13,17 +16,17 @@ namespace UserApiTask.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
+        private readonly UserConfiguration _userConfig;
         private readonly ILogger<UserController> _logger;
         private AppDbContext _context;
 
-        public UserController(ILogger<UserController> logger, AppDbContext context)
+        public UserController(ILogger<UserController> logger, AppDbContext context,UserConfiguration userConfiguration)
         {
+            _userConfig = userConfiguration;
             _context = context;
             _logger = logger;
         }
 
-
-        // GET api/<UserController>/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get([FromRoute(Name ="id")]int id)
         {
@@ -42,7 +45,6 @@ namespace UserApiTask.Controllers
             return Ok(user);
         }
 
-        // GET api/<UserController>?params...
         [HttpGet]
         public async Task<IActionResult> Get([FromQuery(Name ="id")]int? id,
             [FromQuery(Name = "name")] string? name,
@@ -55,7 +57,7 @@ namespace UserApiTask.Controllers
             [FromQuery(Name = "sortDir")] string? sortDirection
             )
         {
-            int _userPageSize = 10;// move to a file
+            int _userPageSize = _userConfig.PageSize;
             IQueryable<User> users = _context.Users.Include(u=>u.Roles);
             if (id.HasValue)
             {
@@ -117,35 +119,82 @@ namespace UserApiTask.Controllers
             return Ok(resultUsers);
         }
 
-        // POST api/<UserController>
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] User user)
         {
+            if (!ModelState.IsValid)
+            {
+                StringBuilder errorMessage = new StringBuilder();
+                foreach (var item in ModelState)
+                {
+                    if (item.Value.ValidationState == ModelValidationState.Invalid)
+                    {
+                        errorMessage.AppendLine($"error for {item.Key}:");
+                        foreach (var error in item.Value.Errors)
+                        {
+                            errorMessage.AppendLine($"{error.ErrorMessage}");
+                        }
+                    }
+                }
+                return BadRequest(errorMessage.ToString());
+            }
+            if (user == null)
+            {
+                return NotFound();
+            }
+            if (ValidateUserModel(user))
+            {
+
+            }
+            else
+            {
+                return BadRequest();
+            }
             
+
             return Ok();
         }
 
-        // PUT api/<UserController>/5
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] User updatedUser)
         {
+
+            if (!ModelState.IsValid) 
+            {
+                StringBuilder errorMessage =new StringBuilder();
+                foreach (var item in ModelState)
+                {
+                    if (item.Value.ValidationState == ModelValidationState.Invalid)
+                    {
+                        errorMessage.AppendLine($"error for {item.Key}:");
+                        foreach (var error in item.Value.Errors)
+                        {
+                            errorMessage.AppendLine($"{error.ErrorMessage}");
+                        }
+                    }
+                }
+                return BadRequest(errorMessage.ToString());
+            }
             var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u => u.Id.Equals(id));
             if (user == null)
             {
                 return NotFound();
             }
-            user.Age = updatedUser.Age;
-            user.Name = updatedUser.Name;
-            user.Email = updatedUser.Email;
-            if (updatedUser.Roles is not null) 
+            if (ValidateUserModel(user) && !_context.Users.Any(u=> u.Email.Equals(user)))
             {
+                user.Name = updatedUser.Name;
+                user.Age = updatedUser.Age;
+                user.Email = updatedUser.Email;
                 user.Roles = updatedUser.Roles;
+            }
+            else 
+            {
+                return BadRequest();
             }
             await _context.SaveChangesAsync();
             return Ok();
         }
 
-        // PUT api/<UserController>/5
         [HttpPost("{id}/role")]
         public async Task<IActionResult> Put(int id, [FromBody] Role role)
         {
@@ -154,12 +203,18 @@ namespace UserApiTask.Controllers
             {
                 return NotFound();
             }
-            user.Roles = user.Roles.Union(new List<Role>() { role }).ToList();
+            if (user.Roles is not null)
+            {
+                user.Roles = user.Roles.Union(new List<Role>() { role }).ToList();
+            }
+            else 
+            {
+                user.Roles = new List<Role>() { role };
+            }
             await _context.SaveChangesAsync();
             return Ok();
         }
 
-        // DELETE api/<UserController>/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -174,6 +229,13 @@ namespace UserApiTask.Controllers
             {
                 return NotFound();
             }
+        }
+
+        private static bool ValidateUserModel(User user) 
+        {
+            return user.Name is not null &&
+                user.Age > 0 &&
+                user.Roles is not null;
         }
 
         private static Expression<Func<User, object>> SortingParam(string? sortParam)
