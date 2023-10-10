@@ -127,9 +127,22 @@ namespace UserApiTask.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] User user)
+        public async Task<IActionResult> Put(int id, [FromBody] User updatedUser)
         {
-
+            var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u => u.Id.Equals(id));
+            if (user == null)
+            {
+                return NotFound();
+            }
+            user.Age = updatedUser.Age;
+            user.Name = updatedUser.Name;
+            user.Email = updatedUser.Email;
+            if (updatedUser.Roles is not null) 
+            {
+                user.Roles = updatedUser.Roles;
+            }
+            await _context.SaveChangesAsync();
+            return Ok();
         }
 
         // PUT api/<UserController>/5
@@ -151,7 +164,7 @@ namespace UserApiTask.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var user = _context.Users.FirstOrDefault(x => x.Id == id);
-            if (!(user is null))
+            if (user is not null)
             {
                 _context.Users.Remove(user);
                 await _context.SaveChangesAsync();
