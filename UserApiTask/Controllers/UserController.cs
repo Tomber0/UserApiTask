@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using System.Linq.Expressions;
 using UserApiTask.Models;
+using UserApiTask.Utils;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -40,9 +42,9 @@ namespace UserApiTask.Controllers
             return Ok(user);
         }
 
-        // GET api/<UserController>/5
+        // GET api/<UserController>?params...
         [HttpGet]
-        public async Task<IActionResult> Get([FromQuery(Name ="id")]int id,
+        public async Task<IActionResult> Get([FromQuery(Name ="id")]int? id,
             [FromQuery(Name = "name")] string? name,
             [FromQuery(Name = "age")] int? age,
             [FromQuery(Name = "email")] string? email,
@@ -55,6 +57,10 @@ namespace UserApiTask.Controllers
         {
             int _userPageSize = 10;// move to a file
             IQueryable<User> users = _context.Users.Include(u=>u.Roles);
+            if (id.HasValue)
+            {
+                users = users.Where(u => u.Id.Equals(id));
+            }
             if (!string.IsNullOrEmpty(name)) 
             {
                 users = users.Where(u => u.Name.Equals(name));
@@ -111,6 +117,52 @@ namespace UserApiTask.Controllers
             return Ok(resultUsers);
         }
 
+        // POST api/<UserController>
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] User user)
+        {
+            
+            return Ok();
+        }
+
+        // PUT api/<UserController>/5
+        [HttpPut("{id}")]
+        public void Put(int id, [FromBody] User user)
+        {
+
+        }
+
+        // PUT api/<UserController>/5
+        [HttpPost("{id}/role")]
+        public async Task<IActionResult> Put(int id, [FromBody] Role role)
+        {
+            var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u=> u.Id.Equals(id));
+            if (user == null) 
+            {
+                return NotFound();
+            }
+            user.Roles = user.Roles.Union(new List<Role>() { role }).ToList();
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        // DELETE api/<UserController>/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var user = _context.Users.FirstOrDefault(x => x.Id == id);
+            if (!(user is null))
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return Ok();
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
+
         private static Expression<Func<User, object>> SortingParam(string? sortParam)
         {
             return sortParam.ToLower() switch
@@ -118,28 +170,10 @@ namespace UserApiTask.Controllers
                 "name" => u => u.Name,
                 "age" => u => u.Age,
                 "email" => u => u.Email,
-                "role" => u => u.Roles,
+                "rolename" => u => u.Roles.Select(r => r.Name),
+                "roleid" => u => u.Roles.Select(r => r.Id),
                 _ => u => u.Id
             };
-        }
-
-        // POST api/<UserController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
-
-        // PUT api/<UserController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-
-        }
-
-        // DELETE api/<UserController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
         }
     }
 }

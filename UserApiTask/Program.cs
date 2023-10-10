@@ -1,17 +1,24 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using UserApiTask.Configurations;
 using UserApiTask.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+IConfigurationRoot configuration = new ConfigurationBuilder().SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+    .AddJsonFile("appsettings.json")
+    .Build();
+
+builder.Services.AddSingleton<IConfigurationRoot>(configuration);
 builder.Services.AddControllers();
-builder.Services.AddDbContext<AppDbContext>();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddDbContext<AppDbContext>(options=>options.UseSqlServer(configuration.GetConnectionString("LocalConnection")));
+
+builder.Services.Configure<UserConfiguration>(configuration.GetSection("PageSize"));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
