@@ -138,21 +138,25 @@ namespace UserApiTask.Controllers
                 }
                 return BadRequest(errorMessage.ToString());
             }
+            var newUser = new User();
             if (user == null)
             {
                 return NotFound();
             }
-            if (ValidateUserModel(user))
+            if (ValidateUserModel(user) && !_context.Users.Any(u => u.Email.Equals(user)))
             {
-
+                newUser.Age = user.Age;
+                newUser.Email = user.Name;
+                newUser.Roles = new List<Role>(newUser.Roles);
             }
             else
             {
                 return BadRequest();
             }
-            
 
-            return Ok();
+            _context.Users.Add(newUser);
+            
+            return Ok(newUser);
         }
 
         [HttpPut("{id}")]
