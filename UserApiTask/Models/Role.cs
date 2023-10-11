@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace UserApiTask.Models
 {
@@ -9,5 +10,8 @@ namespace UserApiTask.Models
 
         [Required]
         public string Name { get; set; }
+
+        [JsonIgnore]
+        public List<User> Users { get; set; } = new();
     }
 }

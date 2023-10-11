@@ -33,14 +33,7 @@ namespace UserApiTask.Controllers
         public async Task<IActionResult> GetUserById([FromRoute(Name ="id")]int id)
         {
             _logger.LogInformation($"{Request.Method} {Request.QueryString.Value}");
-            var user = await _context.Users.Include(u=> u.Roles).Select(u => new User 
-            {
-                Id = u.Id, 
-                Name = u.Name,
-                Age = u.Age,
-                Email = u.Email,
-                Roles = u.Roles,
-            }).FirstOrDefaultAsync();
+            var user = await _context.Users.Include(u=> u.Roles).Where(u=> u.Id.Equals(id)).FirstOrDefaultAsync();
             if (user == null) 
             {
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was not found (404)");
@@ -157,11 +150,12 @@ namespace UserApiTask.Controllers
                 _logger.LogInformation($"[{Request.Method}] User model was invalid (400)");
                 return BadRequest();
             }
-            if (ValidateUserModel(user) && !_context.Users.Any(u => u.Email.Equals(user)))
-            {
+            if (ValidateUserModel(user) && !_context.Users.Any(u => u.Email.Equals(user.Email)))
+            {//для валидации данных обычно используются аттрибуты, но в ТЗ сказно проводить на уровне контроллера.
                 newUser.Age = user.Age;
-                newUser.Email = user.Name;
-                newUser.Roles = new List<Role>(newUser.Roles);
+                newUser.Email = user.Email;
+                newUser.Name = user.Name;
+                newUser.Roles = newUser.Roles ?? new List<Role>();
             }
             else
             {
@@ -170,6 +164,7 @@ namespace UserApiTask.Controllers
                 return BadRequest();
             }
             _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
             return Ok(newUser);
         }
 
@@ -201,13 +196,14 @@ namespace UserApiTask.Controllers
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} role was not found (404)");
                 return NotFound();
             }
-            if (ValidateUserModel(user) && !_context.Users.Any(u=> u.Email.Equals(user)))
+            if (ValidateUserModel(user) && !_context.Users.Any(u=> u.Email.Equals(user.Email)))
             {
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] Attempting to update User id={id}");
                 user.Name = updatedUser.Name;
                 user.Age = updatedUser.Age;
                 user.Email = updatedUser.Email;
                 user.Roles = updatedUser.Roles;
+                await _context.SaveChangesAsync();
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was updated");
             }
             else 
@@ -216,7 +212,6 @@ namespace UserApiTask.Controllers
                 await LogRequest();
                 return BadRequest();
             }
-            await _context.SaveChangesAsync();
             _logger.LogInformation($"Created a new User (200)");
             return Ok();
         }
@@ -230,13 +225,15 @@ namespace UserApiTask.Controllers
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was not found (404)");
                 return NotFound();
             }
-            if (user.Roles is not null)
+            if (!_context.Roles.Any(r=> r.Id.Equals(role.Id) && r.Name.Equals(role.Name))) 
+            {
+                _logger.LogInformation($"[{Request.Method.ToUpper()}] Attempt to insert an invalid role (400)");
+                return BadRequest();
+
+            }
+            if (!user.Roles.Any(r=> r.Id.Equals(role.Id)))
             {
                 user.Roles = user.Roles.Union(new List<Role>() { role }).ToList();
-            }
-            else 
-            {
-                user.Roles = new List<Role>() { role };
             }
             _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} role was gained:{role.Name} (200)");
             await _context.SaveChangesAsync();
@@ -265,8 +262,7 @@ namespace UserApiTask.Controllers
         private static bool ValidateUserModel(User user) 
         {
             return user.Name is not null &&
-                user.Age > 0 &&
-                user.Roles is not null;
+                user.Age > 0;
         }
 
         async Task LogRequest()
