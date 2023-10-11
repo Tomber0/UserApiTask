@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IConfigurationRoot>(configuration);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options=>options.UseSqlServer(configuration.GetConnectionString("LocalConnection")));
-builder.Services.Configure<UserConfiguration>(configuration.GetSection("PageSize"));
+builder.Services.Configure<UserConfiguration>(configuration.GetSection("UserOptions"));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddLogging(logging => 

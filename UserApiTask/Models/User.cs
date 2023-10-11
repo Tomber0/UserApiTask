@@ -17,7 +17,6 @@ namespace UserApiTask.Models
         [Required(ErrorMessage = "Email field is required")]
         public string Email { get; set; }
 
-        [ForeignKey("RoleId")]
         public List<Role>? Roles { get; set; }
 
     }

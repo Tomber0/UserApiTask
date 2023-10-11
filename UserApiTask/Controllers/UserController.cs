@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -16,11 +17,12 @@ namespace UserApiTask.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly UserConfiguration _userConfig;
+        private readonly IOptionsMonitor<UserConfiguration> _userConfig;
+        //private readonly UserConfiguration _userConfig;
         private readonly ILogger<UserController> _logger;
         private AppDbContext _context;
 
-        public UserController(ILogger<UserController> logger, AppDbContext context,UserConfiguration userConfiguration)
+        public UserController(ILogger<UserController> logger, AppDbContext context, IOptionsMonitor<UserConfiguration> userConfiguration)
         {
             _userConfig = userConfiguration;
             _context = context;
@@ -62,7 +64,7 @@ namespace UserApiTask.Controllers
         {
             _logger.LogInformation($"{Request.Method} {Request.QueryString.Value}");
 
-            int _userPageSize = _userConfig.PageSize;
+            int _userPageSize = _userConfig.CurrentValue.PageSize;
             IQueryable<User> users = _context.Users.Include(u=>u.Roles);
             if (id.HasValue)
             {
