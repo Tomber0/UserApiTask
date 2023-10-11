@@ -1,11 +1,8 @@
-﻿using Azure.Core;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Mime;
 using System.Text;
@@ -31,7 +28,18 @@ namespace UserApiTask.Controllers
             _context = context;
             _logger = logger;
         }
-
+        /// <summary>
+        /// Get user by Id
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// 
+        /// GET User/1
+        /// </remarks>
+        /// <param name="id">User Id(num)</param>
+        /// <returns></returns>
+        /// <response code="200">Return a User</response>
+        /// <response code="404">User with Id was not found</response>
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -49,6 +57,27 @@ namespace UserApiTask.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Get user by it's values
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// 
+        /// GET User?id=1&amp;name=name
+        /// </remarks>
+        /// <param name="id">User Id(num)</param>
+        /// <param name="name">User Name(string)</param>
+        /// <param name="age">User Age(num)</param>
+        /// <param name="email">User Email(string)</param>
+        /// <param name="roleName">User's Role Name(string)</param>
+        /// <param name="roleId">User's Role Id(num)</param>
+        /// <param name="page">Page(num)</param>
+        /// <param name="sortParam">Name of field to order User objects('id','name','email','age','rolename','roleid')</param>
+        /// <param name="sortDirection">Order direction ('asc','desc')</param>
+        /// <returns></returns>
+        ///<response code="200">Return a User</response>
+        /// <response code="404">User was not found</response>
+        /// <response code="400">Wrong passed parameters</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -129,6 +158,31 @@ namespace UserApiTask.Controllers
             return Ok(resultUsers);
         }
 
+        /// <summary>
+        /// Creates a new User
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// POST User
+        /// {
+        ///  
+        ///  "name": "string",
+        ///  "age": 0,
+        ///  "email": "string",
+        ///  "roles": [
+        ///    {
+        ///      "id": 0,
+        ///      "name": "string"
+        ///    }
+        ///  ]
+        ///}
+        /// 
+        /// </remarks>
+        /// <param name="user">User model</param>
+        /// <returns></returns>
+        ///<response code="200">Return a new User</response>
+        /// <response code="404">User was not found</response>
+        /// <response code="400">Provided body was not correct</response>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -181,6 +235,33 @@ namespace UserApiTask.Controllers
             await _context.SaveChangesAsync();
             return Ok(newUser);
         }
+
+        /// <summary>
+        /// Updates a User
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// PUT User/1
+        /// {
+        ///  
+        ///  "name": "string",
+        ///  "age": 0,
+        ///  "email": "string",
+        ///  "roles": [
+        ///    {
+        ///      "id": 0,
+        ///      "name": "string"
+        ///    }
+        ///  ]
+        ///}
+        /// 
+        /// </remarks>
+        /// <param name="id">User's id</param>
+        /// <param name="updatedUser">User model</param>
+        /// <returns></returns>
+        ///<response code="200">Return an updated User</response>
+        /// <response code="404">User was not found</response>
+        /// <response code="400">Provided body was not correct</response>
 
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -237,6 +318,25 @@ namespace UserApiTask.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Creates a new User
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// POST User/1/role
+        /// 
+        /// {
+        ///  "id": 0,
+        ///  "name": "string"
+        ///}
+        /// 
+        /// </remarks>
+        /// <param name="role">Role model</param>
+        /// <param name="id">User's id(num)</param>
+        /// <returns></returns>
+        ///<response code="200">Return an updated User with new role</response>
+        /// <response code="404">User was not found</response>
+        /// <response code="400">Provided body was not correct</response>
         [HttpPost("{id}/role")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -286,6 +386,18 @@ namespace UserApiTask.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Deletes user by Id
+        /// </summary>
+        /// <remarks>
+        /// Request example:
+        /// 
+        /// DELETE User/1
+        /// </remarks>
+        /// <param name="id">User's Id(num)</param>
+        /// <returns></returns>
+        /// <response code="200">User was deleted</response>
+        /// <response code="404">User with Id was not found</response>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
