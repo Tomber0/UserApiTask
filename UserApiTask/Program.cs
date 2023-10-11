@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using NLog.Extensions.Logging;
+using System.Reflection;
 using UserApiTask.Configurations;
 using UserApiTask.Models;
 
@@ -14,7 +17,18 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options=>options.UseSqlServer(configuration.GetConnectionString("LocalConnection")));
 builder.Services.Configure<UserConfiguration>(configuration.GetSection("UserOptions"));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c=> 
+{
+    c.SwaggerDoc("v1",new OpenApiInfo 
+    {
+        Version = "v1",
+        Title = "Task API",
+        Description = "User Task API"
+    });
+    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+
+});
 builder.Services.AddLogging(logging => 
 {
     logging.AddConfiguration(configuration.GetSection("Logging"));

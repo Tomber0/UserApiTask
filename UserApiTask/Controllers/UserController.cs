@@ -1,4 +1,5 @@
 ﻿using Azure.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Mime;
 using System.Text;
 using UserApiTask.Configurations;
 using UserApiTask.Models;
@@ -14,11 +16,12 @@ using UserApiTask.Utils;
 namespace UserApiTask.Controllers
 {
     [Route("api/[controller]")]
+    [Produces(MediaTypeNames.Application.Json)]
+    [Consumes(MediaTypeNames.Application.Json)]
     [ApiController]
     public class UserController : ControllerBase
     {
         private readonly IOptionsMonitor<UserConfiguration> _userConfig;
-        //private readonly UserConfiguration _userConfig;
         private readonly ILogger<UserController> _logger;
         private AppDbContext _context;
 
@@ -30,6 +33,8 @@ namespace UserApiTask.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetUserById([FromRoute(Name ="id")]int id)
         {
             _logger.LogInformation($"{Request.Method} {Request.QueryString.Value}");
@@ -44,6 +49,9 @@ namespace UserApiTask.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> GetUser([FromQuery(Name ="id")]int? id,
             [FromQuery(Name = "name")] string? name,
             [FromQuery(Name = "age")] int? age,
@@ -122,6 +130,8 @@ namespace UserApiTask.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> CreateUser([FromBody] User user)
         {
             _logger.LogInformation($"{Request.Method} User");
@@ -169,6 +179,9 @@ namespace UserApiTask.Controllers
         }
 
         [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] User updatedUser)
         {
 
@@ -217,8 +230,31 @@ namespace UserApiTask.Controllers
         }
 
         [HttpPost("{id}/role")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> AddRoleToUserById(int id, [FromBody] Role role)
         {
+            _logger.LogInformation($"{Request.Method} Add role");
+            if (!ModelState.IsValid)
+            {
+                _logger.LogInformation($"[{Request.Method}] Role model was invalid, getting an error message...");
+                StringBuilder errorMessage = new();
+                foreach (var item in ModelState)
+                {
+                    if (item.Value.ValidationState == ModelValidationState.Invalid)
+                    {
+                        errorMessage.AppendLine($"error for {item.Key}:");
+                        foreach (var error in item.Value.Errors)
+                        {
+                            errorMessage.AppendLine($"{error.ErrorMessage}");
+                        }
+                    }
+                }
+                _logger.LogInformation($"[{Request.Method}] role model was invalid (400)");
+                await LogRequest();
+                return BadRequest(errorMessage.ToString());
+            }
             var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u=> u.Id.Equals(id));
             if (user == null) 
             {
@@ -241,6 +277,8 @@ namespace UserApiTask.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteUser(int id)
         {
             _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was called");
@@ -261,8 +299,9 @@ namespace UserApiTask.Controllers
 
         private static bool ValidateUserModel(User user) 
         {
-            return user.Name is not null &&
-                user.Age > 0;
+            return !string.IsNullOrEmpty(user.Name) &&
+                    user.Age > 0 &&
+                    !string.IsNullOrEmpty(user.Email);
         }
 
         async Task LogRequest()
