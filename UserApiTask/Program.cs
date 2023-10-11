@@ -6,7 +6,6 @@ using System.Reflection;
 using UserApiTask.Configurations;
 using UserApiTask.Models;
 
-
 IConfigurationRoot configuration = new ConfigurationBuilder().SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
     .AddJsonFile("appsettings.json")
     .Build();

@@ -41,8 +41,9 @@ namespace UserApiTask.Controllers
             var user = await _context.Users.Include(u=> u.Roles).Where(u=> u.Id.Equals(id)).FirstOrDefaultAsync();
             if (user == null) 
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was not found (404)");
-                return NotFound();
+                string errorMsg = $"[{Request.Method.ToUpper()}] User with id={id} was not found (404)";
+                _logger.LogInformation(errorMsg);
+                return NotFound(errorMsg);
             }
             _logger.LogInformation($"Sending user with {Request.QueryString.Value}");
             return Ok(user);
@@ -101,10 +102,6 @@ namespace UserApiTask.Controllers
                     {
                         users = users.OrderByDescending(keyselector);
                     }
-                    else if (!sortDirection.Equals("asc")) 
-                    {
-                        return BadRequest();
-                    }
                 }
                 else
                 {
@@ -115,15 +112,18 @@ namespace UserApiTask.Controllers
             {
                 if (page.Value < 1)
                 {
-                    return BadRequest();
+                    string errorMsg = $"[{Request.Method.ToUpper()}] Page cant be negative or 0 (400)";
+                    _logger.LogInformation($"Sending user with {Request.QueryString.Value}");
+                    return BadRequest(errorMsg);
                 }
                 users = users.Skip((page.Value - 1) * _userPageSize);
             }
             var resultUsers = await users.ToListAsync();
             if (!resultUsers.Any())
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] User {Request.QueryString.Value} was not found (404)");
-                return NotFound();
+                string errorMsg = $"[{Request.Method.ToUpper()}] User {Request.QueryString.Value} was not found (404)";
+                _logger.LogInformation(errorMsg);
+                return NotFound(errorMsg);
             }
             _logger.LogInformation($"Sending user with {Request.QueryString.Value}");
             return Ok(resultUsers);
@@ -165,15 +165,19 @@ namespace UserApiTask.Controllers
                 newUser.Age = user.Age;
                 newUser.Email = user.Email;
                 newUser.Name = user.Name;
-                newUser.Roles = newUser.Roles ?? new List<Role>();
+                var rolesId = user?.Roles.Select(r => r.Id).ToList();
+                var newRoles = _context.Roles.Where(r => rolesId.Any(u => u.Equals(r.Id))).ToList();
+                newUser.Roles = newRoles;
+                var createdUser = _context.Users.Add(newUser);
+                _logger.LogInformation($"[{Request.Method}] User {newUser.Id} was inserted (200)");
             }
             else
             {
-                _logger.LogInformation($"[{Request.Method}] User model was invalid (400)");
+                string errorMsg = $"[{Request.Method}] User model was invalid (400)";
+                _logger.LogInformation(errorMsg);
                 await LogRequest();
-                return BadRequest();
+                return BadRequest(errorMsg);
             }
-            _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
             return Ok(newUser);
         }
@@ -206,27 +210,31 @@ namespace UserApiTask.Controllers
             var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u => u.Id.Equals(id));
             if (user == null)
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} role was not found (404)");
-                return NotFound();
+                string errorMsg = $"[{Request.Method.ToUpper()}] User with id={id} role was not found (404)";
+                _logger.LogInformation(errorMsg);
+                return NotFound(errorMsg);
             }
-            if (ValidateUserModel(user) && !_context.Users.Any(u=> u.Email.Equals(user.Email)))
+            if (ValidateUserModel(user) && !_context.Users.Any(u=> u.Email.Equals(updatedUser.Email)))
             {
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] Attempting to update User id={id}");
                 user.Name = updatedUser.Name;
                 user.Age = updatedUser.Age;
                 user.Email = updatedUser.Email;
-                user.Roles = updatedUser.Roles;
+                var rolesId = updatedUser?.Roles.Select(r=>r.Id).ToList();
+                var newRoles = _context.Roles.Where(r => rolesId.Any(u=>u.Equals(r.Id))).ToList();
+                user.Roles = newRoles;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was updated");
             }
             else 
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] Attempt to update User id={id} was failed! (400)");
+                string errorMsg = $"[{Request.Method.ToUpper()}] Attempt to update User id={id} was failed! (400)";
+                _logger.LogInformation(errorMsg);
                 await LogRequest();
-                return BadRequest();
+                return BadRequest(errorMsg);
             }
             _logger.LogInformation($"Created a new User (200)");
-            return Ok();
+            return Ok(user);
         }
 
         [HttpPost("{id}/role")]
@@ -258,13 +266,15 @@ namespace UserApiTask.Controllers
             var user = _context.Users.Include(u => u.Roles).FirstOrDefault(u=> u.Id.Equals(id));
             if (user == null) 
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} was not found (404)");
-                return NotFound();
+                string errorMsg = $"[{Request.Method.ToUpper()}] User with id={id} was not found (404)";
+                _logger.LogInformation(errorMsg);
+                return NotFound(errorMsg);
             }
             if (!_context.Roles.Any(r=> r.Id.Equals(role.Id) && r.Name.Equals(role.Name))) 
             {
-                _logger.LogInformation($"[{Request.Method.ToUpper()}] Attempt to insert an invalid role (400)");
-                return BadRequest();
+                string errorMsg = $"[{Request.Method.ToUpper()}] Attempt to insert an invalid role (400)";
+                _logger.LogInformation(errorMsg);
+                return BadRequest(errorMsg);
 
             }
             if (!user.Roles.Any(r=> r.Id.Equals(role.Id)))
@@ -273,7 +283,7 @@ namespace UserApiTask.Controllers
             }
             _logger.LogInformation($"[{Request.Method.ToUpper()}] User with id={id} role was gained:{role.Name} (200)");
             await _context.SaveChangesAsync();
-            return Ok();
+            return Ok(user);
         }
 
         [HttpDelete("{id}")]
@@ -323,8 +333,8 @@ namespace UserApiTask.Controllers
                 "name" => u => u.Name,
                 "age" => u => u.Age,
                 "email" => u => u.Email,
-                "rolename" => u => u.Roles.Select(r => r.Name),
-                "roleid" => u => u.Roles.Select(r => r.Id),
+                "rolename" => u => u.Roles.OrderBy(l=>l.Name).FirstOrDefault().Name,
+                "roleid" => u => u.Roles.OrderBy(l => l.Id).FirstOrDefault().Id,
                 _ => u => u.Id
             };
         }
